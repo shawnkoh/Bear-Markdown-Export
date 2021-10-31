@@ -34,12 +34,6 @@ or leave list empty for all notes: `limit_export_to_tags = []`
 * Or export as textbundles with images included 
 '''
 
-# The following two lists are more or less mutually exclusive, so use only one of them.
-# (You can use both if you have some nested tags where that makes sense)
-# Also, they only work if `make_tag_folders = True`.
-only_export_these_tags = []  # Leave this list empty for all notes! See below for sample
-# only_export_these_tags = ['bear/github', 'writings'] 
-
 export_as_textbundles = False  # Exports as Textbundles with images included
 export_as_hybrids = True  # Exports as .textbundle only if images included, otherwise as .md
                           # Only used if `export_as_textbundles = True`
