@@ -26,7 +26,6 @@ Then exporting Markdown from Bear sqlite db.
 * check_if_modified() on database.sqlite to see if export is needed
 * Uses rsync for copying, so only markdown files of changed sheets will be updated  
   and synced by Dropbox (or other sync services)
-* Or instead hide tags in HTML comment blocks like: `<!-- #mytag -->` if `hide_tags_in_comment_block = True`
 * Makes subfolders named with first tag in note if `make_tag_folders = True`
 * Files can now be copied to multiple tag-folders if `multi_tags = True`
 * Export can now be restricted to a list of spesific tags: `limit_export_to_tags = ['bear/github', 'writings']`  
@@ -34,11 +33,6 @@ or leave list empty for all notes: `limit_export_to_tags = []`
 * Can export and link to images in common image repository
 * Or export as textbundles with images included 
 '''
-
-make_tag_folders = False  # Exports to folders using first tag only, if `multi_tag_folders = False`
-multi_tag_folders = False  # Copies notes to all 'tag-paths' found in note!
-                          # Only active if `make_tag_folders = True`
-hide_tags_in_comment_block = False  # Hide tags in HTML comments: `<!-- #mytag -->`
 
 # The following two lists are more or less mutually exclusive, so use only one of them.
 # (You can use both if you have some nested tags where that makes sense)
@@ -173,13 +167,9 @@ def export_markdown():
         uuid = row['ZUNIQUEIDENTIFIER']
         filename = clean_title(title)
         file_list = []
-        if make_tag_folders:
-            file_list = sub_path_from_tag(temp_path, filename, md_text)
-        else:
-            file_list.append(os.path.join(temp_path, filename))
+        file_list.append(os.path.join(temp_path, filename))
         if file_list:
             mod_dt = dt_conv(modified)
-            md_text = hide_tags(md_text)
             md_text += '\n\n<!-- {BearID:' + uuid + '} -->\n'
             for filepath in file_list:
                 note_count += 1
@@ -237,66 +227,6 @@ def make_text_bundle(md_text, filepath, mod_dt):
     os.utime(bundle_path, (-1, mod_dt))
 
 
-def sub_path_from_tag(temp_path, filename, md_text):
-    # Get tags in note:
-    pattern1 = r'(?<!\S)\#([.\w\/\-]+)[ \n]?(?!([\/ \w]+\w[#]))'
-    pattern2 = r'(?<![\S])\#([^ \d][.\w\/ ]+?)\#([ \n]|$)'
-    if multi_tag_folders:
-        # Files copied to all tag-folders found in note
-        tags = []
-        for matches in re.findall(pattern1, md_text):
-            tag = matches[0]
-            tags.append(tag)
-        for matches2 in re.findall(pattern2, md_text):
-            tag2 = matches2[0]
-            tags.append(tag2)
-        if len(tags) == 0:
-            # No tags found, copy to root level only
-            return [os.path.join(temp_path, filename)]
-    else:
-        # Only folder for first tag
-        match1 =  re.search(pattern1, md_text)
-        match2 =  re.search(pattern2, md_text)
-        if match1 and match2:
-            if match1.start(1) < match2.start(1):
-                tag = match1.group(1)
-            else:
-                tag = match2.group(1)
-        elif match1:
-            tag = match1.group(1)
-        elif match2:
-            tag = match2.group(1)
-        else:
-            # No tags found, copy to root level only
-            return [os.path.join(temp_path, filename)]
-        tags = [tag]
-    paths = [os.path.join(temp_path, filename)]
-    for tag in tags:
-        if tag == '/':
-            continue
-        if only_export_these_tags:
-            export = False
-            for export_tag in only_export_these_tags:
-                if tag.lower().startswith(export_tag.lower()):
-                    export = True
-                    break
-            if not export:
-                continue
-        for no_tag in no_export_tags:
-            if tag.lower().startswith(no_tag.lower()):
-                return []
-        if tag.startswith('.'):
-            # Avoid hidden path if it starts with a '.'
-            sub_path = '_' + tag[1:]     
-        else:
-            sub_path = tag    
-        tag_path = os.path.join(temp_path, sub_path)
-        if not os.path.exists(tag_path):
-            os.makedirs(tag_path)
-        paths.append(os.path.join(tag_path, filename))      
-    return paths
-
-
 def process_image_links(md_text, filepath):
     '''
     Bear image links converted to MD links
@@ -335,23 +265,6 @@ def write_time_stamp():
                datetime.datetime.now().strftime("%Y-%m-%d at %H:%M:%S"), 0)
     write_file(sync_ts_file_temp, "Markdown from Bear written at: " +
                datetime.datetime.now().strftime("%Y-%m-%d at %H:%M:%S"), 0)
-
-
-def hide_tags(md_text):
-    if hide_tags_in_comment_block:
-        md_text =  re.sub(r'(\n)[ \t]*(\#[^\s#].*)', r'\1<!-- \2 -->', md_text)
-    else:
-        md_text =  re.sub(r'(\n)[ \t]*(\#[^\s#]+)', r'\1\2', md_text)
-    return md_text
-
-
-def restore_tags(md_text):
-    # Tags back to normal Bear tags
-    # if hide_tags_in_comment_block:
-    md_text =  re.sub(r'(\n)<!--[ \t]*(\#[^\s#].*?) -->', r'\1\2', md_text)
-    # else:
-    md_text =  re.sub(r'(\n)[ \t]*(\#[^\s#]+)', r'\1\2', md_text)
-    return md_text
 
 
 def clean_title(title):
@@ -497,7 +410,6 @@ def check_if_image_added(md_text, md_file):
 
 
 def textbundle_to_bear(md_text, md_file, mod_dt):
-    md_text = restore_tags(md_text)
     bundle = os.path.split(md_file)[0]
     match = re.search(r'\{BearID:(.+?)\}', md_text)
     if match:
@@ -538,7 +450,6 @@ def update_sync_time_file(ts):
 
 
 def update_bear_note(md_text, md_file, ts, ts_last_export):
-    md_text = restore_tags(md_text)
     md_text = restore_image_links(md_text)
     uuid = ''
     match = re.search(r'\{BearID:(.+?)\}', md_text)
