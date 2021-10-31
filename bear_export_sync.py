@@ -26,8 +26,6 @@ Then exporting Markdown from Bear sqlite db.
 * check_if_modified() on database.sqlite to see if export is needed
 * Uses rsync for copying, so only markdown files of changed sheets will be updated  
   and synced by Dropbox (or other sync services)
-* "Hides" tags with `period+space` on beginning of line: `. #tag` not appear as H1 in other apps.   
-  (This is removed if sync-back above)
 * Or instead hide tags in HTML comment blocks like: `<!-- #mytag -->` if `hide_tags_in_comment_block = True`
 * Makes subfolders named with first tag in note if `make_tag_folders = True`
 * Files can now be copied to multiple tag-folders if `multi_tags = True`
@@ -37,10 +35,10 @@ or leave list empty for all notes: `limit_export_to_tags = []`
 * Or export as textbundles with images included 
 '''
 
-make_tag_folders = True  # Exports to folders using first tag only, if `multi_tag_folders = False`
-multi_tag_folders = True  # Copies notes to all 'tag-paths' found in note!
+make_tag_folders = False  # Exports to folders using first tag only, if `multi_tag_folders = False`
+multi_tag_folders = False  # Copies notes to all 'tag-paths' found in note!
                           # Only active if `make_tag_folders = True`
-hide_tags_in_comment_block = True  # Hide tags in HTML comments: `<!-- #mytag -->`
+hide_tags_in_comment_block = False  # Hide tags in HTML comments: `<!-- #mytag -->`
 
 # The following two lists are more or less mutually exclusive, so use only one of them.
 # (You can use both if you have some nested tags where that makes sense)
@@ -56,6 +54,7 @@ export_image_repository = True  # Export all notes as md but link images to
                                  # Only used if `export_as_textbundles = False`
 
 import os
+
 HOME = os.getenv('HOME', '')
 default_out_folder = os.path.join(HOME, "Work", "BearNotes")
 default_backup_folder = os.path.join(HOME, "Work", "BearSyncBackup")
@@ -63,16 +62,16 @@ default_backup_folder = os.path.join(HOME, "Work", "BearSyncBackup")
 # NOTE! Your user 'HOME' path and '/BearNotes' is added below!
 # NOTE! So do not change anything below here!!!
 
-import sqlite3
+import argparse
 import datetime
-import re
-import subprocess
-import urllib.parse
-import time
-import shutil
 import fnmatch
 import json
-import argparse
+import re
+import shutil
+import sqlite3
+import subprocess
+import time
+import urllib.parse
 
 parser = argparse.ArgumentParser(description="Sync Bear notes")
 parser.add_argument("--out", default=default_out_folder, help="Path where Bear notes will be synced")
@@ -339,20 +338,19 @@ def write_time_stamp():
 
 
 def hide_tags(md_text):
-    # Hide tags from being seen as H1, by placing `period+space` at start of line:
     if hide_tags_in_comment_block:
         md_text =  re.sub(r'(\n)[ \t]*(\#[^\s#].*)', r'\1<!-- \2 -->', md_text)
     else:
-        md_text =  re.sub(r'(\n)[ \t]*(\#[^\s#]+)', r'\1. \2', md_text)
+        md_text =  re.sub(r'(\n)[ \t]*(\#[^\s#]+)', r'\1\2', md_text)
     return md_text
 
 
 def restore_tags(md_text):
-    # Tags back to normal Bear tags, stripping the `period+space` at start of line:
+    # Tags back to normal Bear tags
     # if hide_tags_in_comment_block:
     md_text =  re.sub(r'(\n)<!--[ \t]*(\#[^\s#].*?) -->', r'\1\2', md_text)
     # else:
-    md_text =  re.sub(r'(\n)\.[ \t]*(\#[^\s#]+)', r'\1\2', md_text)
+    md_text =  re.sub(r'(\n)[ \t]*(\#[^\s#]+)', r'\1\2', md_text)
     return md_text
 
 

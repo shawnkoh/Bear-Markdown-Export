@@ -29,14 +29,14 @@ set_logging_on = True
 # (Easier to delete one tag, than finding a bunch of tagless imported notes.)
 
 import datetime
-import re
-import subprocess
-import urllib.parse
-import os
-import time
-import shutil
 import fnmatch
 import json
+import os
+import re
+import shutil
+import subprocess
+import time
+import urllib.parse
 
 import_tag = '#.imported/' + datetime.datetime.now().strftime('%Y-%m-%d')
 # import_tag = ''  # Blank if not needed
