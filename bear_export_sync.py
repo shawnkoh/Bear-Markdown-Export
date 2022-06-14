@@ -155,7 +155,10 @@ def export_markdown():
     note_count = 0
     for row in c:
         title = row['ZTITLE']
-        md_text = row['ZTEXT'].rstrip()
+        z_text = row["ZTEXT"]
+        if z_text is None:
+            return
+        md_text = z_text.rstrip()
         creation_date = row['ZCREATIONDATE']
         modified = row['ZMODIFICATIONDATE']
         uuid = row['ZUNIQUEIDENTIFIER']
